@@ -1,9 +1,11 @@
 const express = require('express');
-const app = express();
 const cors = require('cors');
 const { Pool } = require('pg');
 const fs = require('fs');
 const satellite = require('satellite.js');
+const multer = require("multer");
+const app = express();
+app.use(cors());
 
 function parsePolygonGeometry(geometry) {
   const geometryData = geometry.slice(16);
@@ -73,7 +75,6 @@ app.get('/api/data', async (req, res) => {
     }
    console.log(query)
 //WHERE timestamp_column > NOW() - INTERVAL '1 day';
-
     const result = await pool.query(query);
     result.rows.forEach((data1) => {
       const geometry = data1.geom;
@@ -101,10 +102,10 @@ app.get('/api/data', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-
+var path_TLE = 'D:\\SKY\\Module_get_tle\\File_idnorard\\tle01052023.txt'
 app.get('/api/satellite',async (req, res) => {
   try {
-    const a =tle_czml('./tle29062023.txt');
+    const a =tle_czml(path_TLE);
     res.json(a);
   } catch (error) {
     console.log(error);
@@ -116,9 +117,30 @@ const port = 3001;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
-
-
+//...........................................
+var upload = multer({ dest: "D:/SKY/Module_get_tle/File_idnorard"});
+//var upload = multer({ dest: "../public/uploads/" });
+  //app.post("/api/tle", upload.single("file"), async (req, res) => {
+  app.post("/api/tle", upload.single("file"), async (req, res) => {
+  try {    
+    if (req.file) {
+      res.send({
+        status: true,
+        message: "File Uploaded!"
+      });
+      path_TLE = `D:\\SKY\\Module_get_tle\\File_idnorard\\${req.file.filename}`
+      console.log(path_TLE)
+    } else {
+      res.status(400).send({
+        status: false,
+        data: "File Not Found :(",
+      });
+    }
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+//............................................
 function tle_czml(filePath) {
   const positions = [];
   const startTime = new Date();
@@ -228,6 +250,7 @@ function tle_czml(filePath) {
           positionAndVelocity.position.x * 1000,
           positionAndVelocity.position.y * 1000,
           positionAndVelocity.position.z * 1000
+    
         );
       }
       combinedData.push(satellitePacket);
